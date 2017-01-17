@@ -1,0 +1,8 @@
+[package]
+name = "sudoku_solver"
+version = "0.1.0"
+authors = ["meven"]
+
+[dependencies]
+time = "0.1.35"
+num_cpus = "1.0"
