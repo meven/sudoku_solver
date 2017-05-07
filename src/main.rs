@@ -172,15 +172,28 @@ fn get_possible_values(grid: Grid, index: usize) -> Vec<u8> {
                   head_of_block + 19,
                   head_of_block + 20];
 
-    let mut val_found: Vec<u8> = (1..10).collect();
+    let mut values_again = [false; 9];
+    let mut n_found = 0;
+    let mut val_found: Vec<u8> = vec![];
+
     for &val in values.iter() {
         if let Some(num) = grid[val] {
-            val_found.retain(|&x| x != num);
-            if val_found.len() == 0 {
-                return val_found;
+            if !values_again[num as usize - 1] {
+                values_again[num as usize - 1] = true;
+                n_found = n_found + 1;
+                if n_found == 9 {
+                    return val_found;
+                }
             }
         }
     }
+
+    for (idx, val) in values_again.iter().enumerate() {
+        if !val {
+            val_found.push(idx as u8 + 1);
+        }
+    }
+
     return val_found;
 }
 
@@ -199,12 +212,13 @@ fn solve_grid(grid: Grid) -> Option<Grid> {
             1 => {
                 // fill in all the cells where there is only one possiblitiy
                 let mut new_g = clone_grid(grid);
-                let only_one_possiblites = possible_values_grid.iter()
-                    .filter(|x| x.1.len() == 1);
 
-                for (&index, possible_values) in only_one_possiblites {
-                    new_g[index] = Some(possible_values[0]);
+                for (&index, possible_values) in possible_values_grid.iter() {
+                    if possible_values.len() == 1 {
+                        new_g[index] = Some(possible_values[0]);
+                    }
                 }
+
                 return solve_grid(new_g);
             }
             _ => {
