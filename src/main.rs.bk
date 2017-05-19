@@ -238,7 +238,7 @@ fn solve_grid(grid: Grid) -> Option<Grid> {
             _ => {
 
                 let mut new_g = clone_grid(grid);
-
+                
                 for val in possible_values {
                     new_g[index] = Some(*val);
 

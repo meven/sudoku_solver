@@ -6,3 +6,5 @@ authors = ["meven"]
 [dependencies]
 time = "0.1.35"
 num_cpus = "1.0"
+error-chain = "0.10.0"
+rayon = "0.7.0"
