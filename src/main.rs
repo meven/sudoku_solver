@@ -47,12 +47,16 @@ impl CellValue {
 }
 
 fn is_grid_complete(g: Grid) -> bool {
-    g.iter().all(|&x| x.is_value())
+    g.iter().enumerate().all(|x| x.1.is_value())
+}
+
+fn is_grid_complete_full(g: Grid) -> bool {
+    g.iter().enumerate().all(|x| x.1.is_value() && check_grid_at(g, x.0 as u8))
 }
 
 fn clone_grid(g: Grid) -> Grid {
     let mut new_g: Grid = [CellValue::Possibilities([true; 9]); 81];
-    for x in 0..g.len() {
+    for x in 0..81 {
         new_g[x] = g[x];
     }
     new_g
@@ -174,133 +178,133 @@ fn check_no_redundant_value(grid: Grid, val: [u8; 9]) -> bool {
     true
 }
 
-fn get_adjacent_cells(index: u8) -> [u8; 27] {
+static ADJACENT_VALUES: [[u8; 20]; 81] =
+    [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 27, 36, 45, 54, 63, 72],
+     [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 28, 37, 46, 55, 64, 73],
+     [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 29, 38, 47, 56, 65, 74],
+     [0, 1, 2, 4, 5, 6, 7, 8, 12, 13, 14, 21, 22, 23, 30, 39, 48, 57, 66, 75],
+     [0, 1, 2, 3, 5, 6, 7, 8, 12, 13, 14, 21, 22, 23, 31, 40, 49, 58, 67, 76],
+     [0, 1, 2, 3, 4, 6, 7, 8, 12, 13, 14, 21, 22, 23, 32, 41, 50, 59, 68, 77],
+     [0, 1, 2, 3, 4, 5, 7, 8, 15, 16, 17, 24, 25, 26, 33, 42, 51, 60, 69, 78],
+     [0, 1, 2, 3, 4, 5, 6, 8, 15, 16, 17, 24, 25, 26, 34, 43, 52, 61, 70, 79],
+     [0, 1, 2, 3, 4, 5, 6, 7, 15, 16, 17, 24, 25, 26, 35, 44, 53, 62, 71, 80],
+     [0, 1, 2, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 27, 36, 45, 54, 63, 72],
+     [0, 1, 2, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 28, 37, 46, 55, 64, 73],
+     [0, 1, 2, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 29, 38, 47, 56, 65, 74],
+     [3, 4, 5, 9, 10, 11, 13, 14, 15, 16, 17, 21, 22, 23, 30, 39, 48, 57, 66, 75],
+     [3, 4, 5, 9, 10, 11, 12, 14, 15, 16, 17, 21, 22, 23, 31, 40, 49, 58, 67, 76],
+     [3, 4, 5, 9, 10, 11, 12, 13, 15, 16, 17, 21, 22, 23, 32, 41, 50, 59, 68, 77],
+     [6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 24, 25, 26, 33, 42, 51, 60, 69, 78],
+     [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 24, 25, 26, 34, 43, 52, 61, 70, 79],
+     [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 24, 25, 26, 35, 44, 53, 62, 71, 80],
+     [0, 1, 2, 9, 10, 11, 19, 20, 21, 22, 23, 24, 25, 26, 27, 36, 45, 54, 63, 72],
+     [0, 1, 2, 9, 10, 11, 18, 20, 21, 22, 23, 24, 25, 26, 28, 37, 46, 55, 64, 73],
+     [0, 1, 2, 9, 10, 11, 18, 19, 21, 22, 23, 24, 25, 26, 29, 38, 47, 56, 65, 74],
+     [3, 4, 5, 12, 13, 14, 18, 19, 20, 22, 23, 24, 25, 26, 30, 39, 48, 57, 66, 75],
+     [3, 4, 5, 12, 13, 14, 18, 19, 20, 21, 23, 24, 25, 26, 31, 40, 49, 58, 67, 76],
+     [3, 4, 5, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 26, 32, 41, 50, 59, 68, 77],
+     [6, 7, 8, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 33, 42, 51, 60, 69, 78],
+     [6, 7, 8, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 34, 43, 52, 61, 70, 79],
+     [6, 7, 8, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 35, 44, 53, 62, 71, 80],
+     [0, 9, 18, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 45, 46, 47, 54, 63, 72],
+     [1, 10, 19, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 45, 46, 47, 55, 64, 73],
+     [2, 11, 20, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 45, 46, 47, 56, 65, 74],
+     [3, 12, 21, 27, 28, 29, 31, 32, 33, 34, 35, 39, 40, 41, 48, 49, 50, 57, 66, 75],
+     [4, 13, 22, 27, 28, 29, 30, 32, 33, 34, 35, 39, 40, 41, 48, 49, 50, 58, 67, 76],
+     [5, 14, 23, 27, 28, 29, 30, 31, 33, 34, 35, 39, 40, 41, 48, 49, 50, 59, 68, 77],
+     [6, 15, 24, 27, 28, 29, 30, 31, 32, 34, 35, 42, 43, 44, 51, 52, 53, 60, 69, 78],
+     [7, 16, 25, 27, 28, 29, 30, 31, 32, 33, 35, 42, 43, 44, 51, 52, 53, 61, 70, 79],
+     [8, 17, 26, 27, 28, 29, 30, 31, 32, 33, 34, 42, 43, 44, 51, 52, 53, 62, 71, 80],
+     [0, 9, 18, 27, 28, 29, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 54, 63, 72],
+     [1, 10, 19, 27, 28, 29, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 55, 64, 73],
+     [2, 11, 20, 27, 28, 29, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 56, 65, 74],
+     [3, 12, 21, 30, 31, 32, 36, 37, 38, 40, 41, 42, 43, 44, 48, 49, 50, 57, 66, 75],
+     [4, 13, 22, 30, 31, 32, 36, 37, 38, 39, 41, 42, 43, 44, 48, 49, 50, 58, 67, 76],
+     [5, 14, 23, 30, 31, 32, 36, 37, 38, 39, 40, 42, 43, 44, 48, 49, 50, 59, 68, 77],
+     [6, 15, 24, 33, 34, 35, 36, 37, 38, 39, 40, 41, 43, 44, 51, 52, 53, 60, 69, 78],
+     [7, 16, 25, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 44, 51, 52, 53, 61, 70, 79],
+     [8, 17, 26, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 51, 52, 53, 62, 71, 80],
+     [0, 9, 18, 27, 28, 29, 36, 37, 38, 46, 47, 48, 49, 50, 51, 52, 53, 54, 63, 72],
+     [1, 10, 19, 27, 28, 29, 36, 37, 38, 45, 47, 48, 49, 50, 51, 52, 53, 55, 64, 73],
+     [2, 11, 20, 27, 28, 29, 36, 37, 38, 45, 46, 48, 49, 50, 51, 52, 53, 56, 65, 74],
+     [3, 12, 21, 30, 31, 32, 39, 40, 41, 45, 46, 47, 49, 50, 51, 52, 53, 57, 66, 75],
+     [4, 13, 22, 30, 31, 32, 39, 40, 41, 45, 46, 47, 48, 50, 51, 52, 53, 58, 67, 76],
+     [5, 14, 23, 30, 31, 32, 39, 40, 41, 45, 46, 47, 48, 49, 51, 52, 53, 59, 68, 77],
+     [6, 15, 24, 33, 34, 35, 42, 43, 44, 45, 46, 47, 48, 49, 50, 52, 53, 60, 69, 78],
+     [7, 16, 25, 33, 34, 35, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 53, 61, 70, 79],
+     [8, 17, 26, 33, 34, 35, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 62, 71, 80],
+     [0, 9, 18, 27, 36, 45, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 72, 73, 74],
+     [1, 10, 19, 28, 37, 46, 54, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 72, 73, 74],
+     [2, 11, 20, 29, 38, 47, 54, 55, 57, 58, 59, 60, 61, 62, 63, 64, 65, 72, 73, 74],
+     [3, 12, 21, 30, 39, 48, 54, 55, 56, 58, 59, 60, 61, 62, 66, 67, 68, 75, 76, 77],
+     [4, 13, 22, 31, 40, 49, 54, 55, 56, 57, 59, 60, 61, 62, 66, 67, 68, 75, 76, 77],
+     [5, 14, 23, 32, 41, 50, 54, 55, 56, 57, 58, 60, 61, 62, 66, 67, 68, 75, 76, 77],
+     [6, 15, 24, 33, 42, 51, 54, 55, 56, 57, 58, 59, 61, 62, 69, 70, 71, 78, 79, 80],
+     [7, 16, 25, 34, 43, 52, 54, 55, 56, 57, 58, 59, 60, 62, 69, 70, 71, 78, 79, 80],
+     [8, 17, 26, 35, 44, 53, 54, 55, 56, 57, 58, 59, 60, 61, 69, 70, 71, 78, 79, 80],
+     [0, 9, 18, 27, 36, 45, 54, 55, 56, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74],
+     [1, 10, 19, 28, 37, 46, 54, 55, 56, 63, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74],
+     [2, 11, 20, 29, 38, 47, 54, 55, 56, 63, 64, 66, 67, 68, 69, 70, 71, 72, 73, 74],
+     [3, 12, 21, 30, 39, 48, 57, 58, 59, 63, 64, 65, 67, 68, 69, 70, 71, 75, 76, 77],
+     [4, 13, 22, 31, 40, 49, 57, 58, 59, 63, 64, 65, 66, 68, 69, 70, 71, 75, 76, 77],
+     [5, 14, 23, 32, 41, 50, 57, 58, 59, 63, 64, 65, 66, 67, 69, 70, 71, 75, 76, 77],
+     [6, 15, 24, 33, 42, 51, 60, 61, 62, 63, 64, 65, 66, 67, 68, 70, 71, 78, 79, 80],
+     [7, 16, 25, 34, 43, 52, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 71, 78, 79, 80],
+     [8, 17, 26, 35, 44, 53, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 78, 79, 80],
+     [0, 9, 18, 27, 36, 45, 54, 55, 56, 63, 64, 65, 73, 74, 75, 76, 77, 78, 79, 80],
+     [1, 10, 19, 28, 37, 46, 54, 55, 56, 63, 64, 65, 72, 74, 75, 76, 77, 78, 79, 80],
+     [2, 11, 20, 29, 38, 47, 54, 55, 56, 63, 64, 65, 72, 73, 75, 76, 77, 78, 79, 80],
+     [3, 12, 21, 30, 39, 48, 57, 58, 59, 66, 67, 68, 72, 73, 74, 76, 77, 78, 79, 80],
+     [4, 13, 22, 31, 40, 49, 57, 58, 59, 66, 67, 68, 72, 73, 74, 75, 77, 78, 79, 80],
+     [5, 14, 23, 32, 41, 50, 57, 58, 59, 66, 67, 68, 72, 73, 74, 75, 76, 78, 79, 80],
+     [6, 15, 24, 33, 42, 51, 60, 61, 62, 69, 70, 71, 72, 73, 74, 75, 76, 77, 79, 80],
+     [7, 16, 25, 34, 43, 52, 60, 61, 62, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 80],
+     [8, 17, 26, 35, 44, 53, 60, 61, 62, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79]];
 
-    let column = get_column(index);
-    let head_of_line = get_line(index);
-    let head_of_block = get_head_of_block(index);
-    [column,
-     column + 9,
-     column + 18,
-     column + 27,
-     column + 36,
-     column + 45,
-     column + 54,
-     column + 63,
-     column + 72,
-     head_of_line,
-     head_of_line + 1,
-     head_of_line + 2,
-     head_of_line + 3,
-     head_of_line + 4,
-     head_of_line + 5,
-     head_of_line + 6,
-     head_of_line + 7,
-     head_of_line + 8,
-     head_of_block,
-     head_of_block + 1,
-     head_of_block + 2,
-     head_of_block + 9,
-     head_of_block + 10,
-     head_of_block + 11,
-     head_of_block + 18,
-     head_of_block + 19,
-     head_of_block + 20]
+fn get_adjacent_cells(index: u8) -> [u8; 20] {
+    // let column = get_column(index);
+    // let head_of_line = get_line(index);
+    // let head_of_block = get_head_of_block(index);
+    // [column,
+    // column + 9,
+    // column + 18,
+    // column + 27,
+    // column + 36,
+    // column + 45,
+    // column + 54,
+    // column + 63,
+    // column + 72,
+    // head_of_line,
+    // head_of_line + 1,
+    // head_of_line + 2,
+    // head_of_line + 3,
+    // head_of_line + 4,
+    // head_of_line + 5,
+    // head_of_line + 6,
+    // head_of_line + 7,
+    // head_of_line + 8,
+    // head_of_block,
+    // head_of_block + 1,
+    // head_of_block + 2,
+    // head_of_block + 9,
+    // head_of_block + 10,
+    // head_of_block + 11,
+    // head_of_block + 18,
+    // head_of_block + 19,
+    // head_of_block + 20]
+    //
+    ADJACENT_VALUES[index as usize]
 }
 
-fn complete_grid_at_value(mut grid: &mut Grid, val: [u8; 9]) -> Option<bool> {
-    let mut checked: [bool; 9] = [true; 9];
-    let mut poss_filled: [bool; 9] = [true; 9];
-    let mut nb_values_filled = 0;
-    for (i, &v) in val.iter().enumerate() {
-        if let CellValue::Value(cell_value) = grid[v as usize] {
-            nb_values_filled += 1;
-            checked[(cell_value - 1) as usize] = false;
-            poss_filled[i] = false;
-        }
-    }
-    // Only one value is possible for a cell
-    if nb_values_filled == 8 {
-        for (poss_idx, &poss_val) in poss_filled.iter().enumerate() {
-            if poss_val {
-                for (check_idx, &checked_val) in checked.iter().enumerate() {
-                    if checked_val {
-                        grid[val[poss_idx] as usize] = CellValue::Value(check_idx as u8 + 1);
-                    }
-                }
-            }
-        }
-        return Some(true);
-    }
-    Some(false)
+fn build_possible_values_grid(mut grid: &mut Grid) -> Option<()> {
+    build_possible_values_grid_start(grid, 81)
 }
 
-fn complete_grid_at(mut grid: &mut Grid, index: u8) -> Option<bool> {
+fn build_possible_values_grid_start(mut grid: &mut Grid, end: usize) -> Option<()> {
 
-    let mut ret = false;
+    let mut last_value_changed = 0;
 
-    let line = index * 9;
-
-    // complete lines
-    let val = [line, line + 1, line + 2, line + 3, line + 4, line + 5, line + 6, line + 7,
-               line + 8];
-    match complete_grid_at_value(grid, val) {
-        Some(v) => {
-            ret = v;
-        }
-        None => {
-            return None;
-        }
-    }
-
-    // complete column
-    let column = index;
-    let val = [column,
-               column + 9,
-               column + 18,
-               column + 27,
-               column + 36,
-               column + 45,
-               column + 54,
-               column + 63,
-               column + 72];
-    match complete_grid_at_value(grid, val) {
-        Some(v) => {
-            ret = v;
-        }
-        None => {
-            return None;
-        }
-    }
-
-    // complete block
-    let head_of_block = (index / 3 * 27) + (index % 3) * 3;
-    let val = [head_of_block,
-               head_of_block + 1,
-               head_of_block + 2,
-               head_of_block + 9,
-               head_of_block + 10,
-               head_of_block + 11,
-               head_of_block + 18,
-               head_of_block + 19,
-               head_of_block + 20];
-    match complete_grid_at_value(grid, val) {
-        Some(v) => {
-            ret = v;
-        }
-        None => {
-            return None;
-        }
-    }
-
-    Some(ret)
-}
-
-fn build_possible_values_grid(mut grid: &mut Grid) -> Option<bool> {
-
-    let mut val_found = false;
-
-    for index in 0..81 {
+    for index in 0..end {
         let is_possibility = !grid[index].is_value();
         if is_possibility {
             let possible_value = get_possible_values(*grid, index as u8);
@@ -308,9 +312,11 @@ fn build_possible_values_grid(mut grid: &mut Grid) -> Option<bool> {
                 Some(CellValue::Possibilities(_)) => {
                     grid[index] = possible_value.unwrap();
                 }
-                Some(CellValue::Value(_)) => {
-                    grid[index] = possible_value.unwrap();
-                    val_found = true;
+                Some(CellValue::Value(new_value)) => {
+                    grid[index] = CellValue::Value(new_value);
+                    if last_value_changed < index {
+                        last_value_changed = index;
+                    }
                 }
                 None => {
                     return None;
@@ -318,58 +324,44 @@ fn build_possible_values_grid(mut grid: &mut Grid) -> Option<bool> {
             }
         }
     }
-
-    Some(val_found)
-}
-
-fn try_complete_grid(mut grid: &mut Grid) -> Option<bool> {
-    let mut val_found = Some(false);
-    for index in 0..9 {
-        match complete_grid_at(grid, index) {
-            Some(true) => {
-                val_found = Some(true);
-            }
-            None => {
-                return None;
-            }
-            _ => {}
-        }
+    if last_value_changed != 0 {
+        // a value was filed before the first value
+        // we need to update the previously computed possibilities
+        return build_possible_values_grid_start(grid, last_value_changed);
     }
-    val_found
+    Some(())
 }
-
 
 fn get_possible_values(grid: Grid, index: u8) -> Option<CellValue> {
 
-    let values = get_adjacent_cells(index);
-    let mut poss = CellValue::Possibilities([true; 9]);
-    let mut n_found = 0;
+    let mut poss = grid[index as usize].clone();
 
-    match poss {
-        CellValue::Possibilities(ref mut values_again) => {
-            for &val in &values {
-                if let CellValue::Value(num) = grid[val as usize] {
-                    if values_again[num as usize - 1] {
-                        values_again[num as usize - 1] = false;
-                        n_found += 1;
-                        if n_found == 9 {
-                            return None;
-                        }
-                    }
-                }
-            }
+    if let CellValue::Possibilities(ref mut values_again) = poss {
 
-            // There is only one option left
-            if n_found == 8 {
-                for (idx, &value) in values_again.iter().enumerate() {
-                    if value {
-                        let new_cell_value = idx as u8 + 1;
-                        return Some(CellValue::Value(new_cell_value));
+        let values = get_adjacent_cells(index);
+        let mut n_poss = values_again.iter().fold(0, |sum, &i| if i { sum + 1 } else { sum });
+
+        for &val in &values {
+            if let CellValue::Value(num) = grid[val as usize] {
+                if values_again[num as usize - 1] {
+                    values_again[num as usize - 1] = false;
+                    n_poss -= 1;
+                    if n_poss == 0 {
+                        // error case: there is no possible values here
+                        return None;
                     }
                 }
             }
         }
-        _ => {}
+
+        // There is only one option left
+        if n_poss == 1 {
+            for (idx, _) in values_again.iter().enumerate().filter(|v| *v.1) {
+                let new_cell_value = idx as u8 + 1;
+                return Some(CellValue::Value(new_cell_value));
+            }
+        }
+
     }
 
     Some(poss)
@@ -377,123 +369,12 @@ fn get_possible_values(grid: Grid, index: u8) -> Option<CellValue> {
 
 fn solve_grid(mut grid: Grid) -> Option<Grid> {
 
-    try_complete_grid(&mut grid);
-    let mut values_found = Some(true);
-
-    while values_found == Some(true) {
-        values_found = build_possible_values_grid(&mut grid);
-        if values_found.is_some() {
-            match try_complete_grid(&mut grid) {
-                Some(true) => {
-                    values_found = Some(true);
-                }
-                None => {
-                    values_found = None;
-                }
-                _ => {}
-            }
-        }
-    }
+    let values_found = build_possible_values_grid(&mut grid);
     if values_found.is_none() {
         return None;
     }
 
-    // let mut values = [[false; 81];9];
-    // let mut known_cells = [0; 9];
-    // let mut options_pervalue = [0; 9];
-    // for (idx, &value) in grid.iter().enumerate() {
-    // match value {
-    // CellValue::Possibilities(poss) => {
-    // for (i, &p) in poss.iter().enumerate() {
-    // if p {
-    // values[i][idx] = true;
-    // options_pervalue[i] += 1;
-    // }
-    // }
-    // },
-    // CellValue::Value(val) => {
-    // known_cells[val as usize - 1] += 1;
-    // }
-    // }
-    // }
-    // println!("{:?}", known_cells);
-    //
-    // let option = known_cells.iter().enumerate()
-    //    .filter(|v| *v.1 != 9).max_by_key(|v| v.1);
-    //
-    // let option = options_pervalue.iter().enumerate().filter(|v| *v.1 > 0).min_by_key(|v| v.1);
-    //
-    // start by the number with the biggest numbers of values already in the grid when guessing
-    // let res = grid.iter().enumerate().min_by_key(|val| val.1.get_nb_possibility());
-    //
-    //
-    // Complete line
-    // Complete column
-    // Complete cell block
-    // set values with the least options
-    // fill the cell whose values have the least cell options
-    //
-    // match option {
-    // Some(val) => {
-    // match res {
-    // Some((index, &cell)) => {
-    //
-    // if *val.1 < cell.get_nb_possibility() {
-    //
-    // let cell_value = val.0;
-    // let res1 = values.iter().enumerate().
-    // filter(|val| val.1.len() > 0).min_by_key(|val| val.1.len());
-    //
-    // println!("{:?}", values[cell_value]);
-    // print_grid_option(grid, true);
-    // for (index ,&val) in values[cell_value].iter().enumerate() {
-    // if val {
-    // let mut new_g = clone_grid(grid);
-    // new_g[index as usize] = CellValue::Value(cell_value as u8 + 1);
-    //
-    // if check_grid_at(new_g, index as u8) {
-    // let gx = solve_grid(new_g);
-    // if gx.is_some() {
-    // return gx;
-    // }
-    // }
-    // }
-    // }
-    // } else {
-    // match cell {
-    // CellValue::Value(_) => {}
-    // CellValue::Possibilities(poss) => {
-    // let mut new_g = clone_grid(grid);
-    //
-    // for (idx, &val) in poss.iter().enumerate() {
-    // if val {
-    // new_g[index as usize] = CellValue::Value(idx as u8 + 1);
-    //
-    // if check_grid_at(new_g, index as u8) {
-    // let gx = solve_grid(new_g);
-    // if gx.is_some() {
-    // return gx;
-    // }
-    // }
-    // }
-    // }
-    // return None;
-    // }
-    // }
-    // }
-    // },
-    // None => {
-    // println!("res was none");
-    // }
-    // }
-    // },
-    // None => {
-    // println!("option was none");
-    // },
-    // }
-    //
-
-    // start by the number with the biggest numbers of values already in the grid when guessing
+    // start by the number with the lowest possible values already in the grid when guessing
     let res = grid.iter().enumerate().min_by_key(|val| val.1.get_nb_possibility());
 
     match res {
@@ -502,16 +383,12 @@ fn solve_grid(mut grid: Grid) -> Option<Grid> {
                 CellValue::Value(_) => {}
                 CellValue::Possibilities(poss) => {
                     let mut new_g = clone_grid(grid);
-
                     for (idx, &val) in poss.iter().enumerate() {
                         if val {
+                            // guess a possible value
                             new_g[index as usize] = CellValue::Value(idx as u8 + 1);
-
-                            if check_grid_at(new_g, index as u8) {
-                                let gx = solve_grid(new_g);
-                                if gx.is_some() {
-                                    return gx;
-                                }
+                            if let Some(gx) = solve_grid(new_g) {
+                                return Some(gx);
                             }
                         }
                     }
@@ -528,10 +405,6 @@ fn solve_grid(mut grid: Grid) -> Option<Grid> {
     if is_grid_complete(grid) {
         Some(grid)
     } else {
-        // println!("{:?}", res);
-        // println!("{:?}", option);
-        // print_grid_option(grid, true);
-        //
         None
     }
 }
@@ -574,6 +447,9 @@ fn treat_grid(grid_string: &str) {
                      (1000_000));
             print_grid(grid);
             print_grid(new_grid);
+            if !is_grid_complete_full(new_grid) {
+                println!("Grid is not correct!");
+            }
         }
         None => {
             println!("Couldn't solve the sudoku :( in {} ms",
@@ -612,7 +488,6 @@ fn run() -> Result<()> {
     grid_strings.push(grid_string);
 
     grid_strings.par_iter().for_each(|grid_string_local| treat_grid(grid_string_local));
-
     Ok(())
 }
 
@@ -711,25 +586,24 @@ _ _ _   _ _ _   _ _ _"#;
     b.iter(|| solve_grid(grid));
 }
 
-// #[cfg(test)]
-// #[bench]
-// fn benchmark2(b: &mut Bencher) {
-//
-// let grid_string = r#"
-// _ _ _   _ _ _   _ _ _
-// _ _ _   _ _ 3   _ 8 5
-// _ _ 1   _ 2 _   _ _ _
-//
-// _ _ _   5 _ 7   _ _ _
-// _ _ 4   _ _ _   1 _ _
-// _ 9 _   _ _ _   _ _ _
-//
-// 5 _ _   _ _ _   _ 7 3
-// _ _ 2   _ 1 _   _ _ _
-// _ _ _   _ 4 _   _ _ 9"#;
-//
-// let grid: Grid = parse_grid(grid_string);
-//
-// b.iter(|| solve_grid(grid));
-// }
-//
+#[cfg(test)]
+#[bench]
+fn benchmark2(b: &mut Bencher) {
+
+    let grid_string = r#"
+ _ _ _   _ _ _   _ _ _
+ _ _ _   _ _ 3   _ 8 5
+ _ _ 1   _ 2 _   _ _ _
+
+ _ _ _   5 _ 7   _ _ _
+ _ _ 4   _ _ _   1 _ _
+ _ 9 _   _ _ _   _ _ _
+
+ 5 _ _   _ _ _   _ 7 3
+ _ _ 2   _ 1 _   _ _ _
+ _ _ _   _ 4 _   _ _ 9"#;
+
+    let grid: Grid = parse_grid(grid_string);
+
+    b.iter(|| solve_grid(grid));
+}
