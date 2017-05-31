@@ -55,7 +55,7 @@ fn is_grid_complete_full(g: Grid) -> bool {
 }
 
 fn clone_grid(g: Grid) -> Grid {
-    let mut new_g: Grid = [CellValue::Possibilities([true; 9]); 81];
+    let mut new_g: Grid = [CellValue::Value(0); 81];
     for x in 0..81 {
         new_g[x] = g[x];
     }
@@ -387,8 +387,10 @@ fn solve_grid(mut grid: Grid) -> Option<Grid> {
                         if val {
                             // guess a possible value
                             new_g[index as usize] = CellValue::Value(idx as u8 + 1);
-                            if let Some(gx) = solve_grid(new_g) {
-                                return Some(gx);
+                            if check_grid_at(new_g, index as u8) {
+                                if let Some(gx) = solve_grid(new_g) {
+                                    return Some(gx);
+                                }
                             }
                         }
                     }
