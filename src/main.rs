@@ -24,7 +24,7 @@ error_chain! {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum CellValue {
-    Value(u8),
+    Value(usize),
     Possibilities([bool; 9]),
 }
 
@@ -38,7 +38,7 @@ impl CellValue {
         }
     }
 
-    pub fn get_nb_possibility(&self) -> u8 {
+    pub fn get_nb_possibility(&self) -> usize {
         match *self {
             CellValue::Value(_) => 10,
             CellValue::Possibilities(values) => {
@@ -57,13 +57,7 @@ fn is_grid_complete(g: Grid) -> bool {
 fn is_grid_complete_full(g: Grid) -> bool {
     g.iter()
         .enumerate()
-        .all(|x| x.1.is_value() && check_grid_at(g, x.0 as u8))
-}
-
-fn clone_grid(g: Grid) -> Grid {
-    let mut new_g: Grid = [CellValue::Value(0); 81];
-    new_g[..81].clone_from_slice(&g[..81]);
-    new_g
+        .all(|x| x.1.is_value() && check_grid_at(g, x.0))
 }
 
 fn print_grid(g: Grid) {
@@ -78,7 +72,7 @@ fn print_grid_option(g: Grid, with_possibilities: bool) {
         cnt += 1;
 
         match x {
-            CellValue::Value(i) => print!("{}", i),
+            CellValue::Value(i) => print!("{}", i + 1),
             CellValue::Possibilities(p) => {
                 if with_possibilities {
                     print!("(");
@@ -111,21 +105,21 @@ fn print_grid_option(g: Grid, with_possibilities: bool) {
 }
 
 /*
-fn get_line(index: u8) -> u8 {
+fn get_line(index: usize) -> usize {
     (index / 9) * 9
 }
 
-fn get_column(index: u8) -> u8 {
+fn get_column(index: usize) -> usize {
     index % 9
 }
 
-fn get_head_of_block(index: u8) -> u8 {
+fn get_head_of_block(index: usize) -> usize {
     index - (index % 3) - (index / 9 % 3) * 9
 }
 */
 
-fn check_grid_at(g: Grid, index: u8) -> bool {
-    let adj_cells = ADJACENT_CELLS[index as usize];
+fn check_grid_at(g: Grid, index: usize) -> bool {
+    let adj_cells = ADJACENT_CELLS[index];
     //let line = get_line(index);
 
     if !check_no_redundant_value(g, adj_cells[0]) {
@@ -141,20 +135,20 @@ fn check_grid_at(g: Grid, index: u8) -> bool {
     true
 }
 
-fn check_no_redundant_value(grid: Grid, val: [u8; 8]) -> bool {
+fn check_no_redundant_value(grid: Grid, val: [usize; 8]) -> bool {
     let mut checked: [bool; 9] = [false; 9];
     for &v in &val {
-        if let CellValue::Value(cell_value) = grid[v as usize] {
-            if checked[(cell_value - 1) as usize] {
+        if let CellValue::Value(cell_value) = grid[v] {
+            if checked[cell_value] {
                 return false;
             }
-            checked[(cell_value - 1) as usize] = true;
+            checked[cell_value] = true;
         }
     }
     true
 }
 
-static ADJACENT_CELLS: [[[u8; 8]; 3]; 81] = [
+static ADJACENT_CELLS: [[[usize; 8]; 3]; 81] = [
     [
         [1, 2, 3, 4, 5, 6, 7, 8],
         [36, 72, 9, 45, 18, 54, 27, 63],
@@ -562,7 +556,7 @@ static ADJACENT_CELLS: [[[u8; 8]; 3]; 81] = [
     ],
 ];
 
-static ADJACENT_VALUES: [[u8; 20]; 81] = [
+static ADJACENT_VALUES: [[usize; 20]; 81] = [
     [
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 27, 36, 45, 54, 63, 72
     ],
@@ -808,7 +802,7 @@ static ADJACENT_VALUES: [[u8; 20]; 81] = [
     ],
 ];
 
-fn get_adjacent_cells(index: u8) -> [u8; 20] {
+fn get_adjacent_cells(index: usize) -> [usize; 20] {
     // let column = get_column(index);
     // let head_of_line = get_line(index);
     // let head_of_block = get_head_of_block(index);
@@ -840,35 +834,26 @@ fn get_adjacent_cells(index: u8) -> [u8; 20] {
     // head_of_block + 19,
     // head_of_block + 20]
     //
-    ADJACENT_VALUES[index as usize]
+    ADJACENT_VALUES[index]
 }
 
 fn build_possible_values_grid(grid: &mut Grid) -> bool {
     for index in 0..81 {
         if !grid[index].is_value() {
-            let possible_value = get_cell_value(*grid, index as u8);
-            match possible_value {
-                Some(CellValue::Possibilities(poss)) => {
-                    match possible_value.unwrap().get_nb_possibility() {
-                        0 => {
+            let possible_value = get_cell_value(*grid, index);
+            if let CellValue::Possibilities(poss) = possible_value {
+                match possible_value.get_nb_possibility() {
+                    0 => {
+                        return false;
+                    }
+                    1 => {
+                        if !set_cell_value_at(grid, index, get_last_value_possible(poss)) {
                             return false;
                         }
-                        1 => {
-                            if !set_cell_value_at(grid, index, get_last_value_possible(poss)) {
-                                return false;
-                            }
-                        }
-                        _ => {
-                            grid[index] = possible_value.unwrap();
-                        }
                     }
-                }
-                Some(CellValue::Value(_)) => {
-                    // cannot occur
-                    // grid[index] = CellValue::Value(new_value);
-                }
-                None => {
-                    return false;
+                    _ => {
+                        grid[index] = possible_value;
+                    }
                 }
             }
         }
@@ -876,69 +861,47 @@ fn build_possible_values_grid(grid: &mut Grid) -> bool {
     true
 }
 
-fn get_possible_values_for_cell(grid: Grid, values: [u8; 8]) -> [bool; 9] {
+fn get_cell_value(grid: Grid, index: usize) -> CellValue {
     let mut possible_values = [true; 9];
 
-    for &val in &values {
-        if let CellValue::Value(num) = grid[val as usize] {
-            if possible_values[num as usize - 1] {
-                possible_values[num as usize - 1] = false;
+    for &val in &get_adjacent_cells(index) {
+        if let CellValue::Value(num) = grid[val] {
+            if possible_values[num] {
+                possible_values[num] = false;
             }
         }
     }
 
-    possible_values
+    CellValue::Possibilities(possible_values)
 }
 
-fn get_cell_value(grid: Grid, index: u8) -> Option<CellValue> {
-    let adj_cells = ADJACENT_CELLS[index as usize];
-
-    // check lines
-    let poss_line = get_possible_values_for_cell(grid, adj_cells[0]);
-
-    let poss_column = get_possible_values_for_cell(grid, adj_cells[1]);
-
-    let poss_block = get_possible_values_for_cell(grid, adj_cells[2]);
-
-    Some(CellValue::Possibilities([
-        poss_line[0] && poss_column[0] && poss_block[0],
-        poss_line[1] && poss_column[1] && poss_block[1],
-        poss_line[2] && poss_column[2] && poss_block[2],
-        poss_line[3] && poss_column[3] && poss_block[3],
-        poss_line[4] && poss_column[4] && poss_block[4],
-        poss_line[5] && poss_column[5] && poss_block[5],
-        poss_line[6] && poss_column[6] && poss_block[6],
-        poss_line[7] && poss_column[7] && poss_block[7],
-        poss_line[8] && poss_column[8] && poss_block[8],
-    ]))
-}
-
-fn get_last_value_possible(possible_values: [bool; 9]) -> u8 {
+fn get_last_value_possible(possible_values: [bool; 9]) -> usize {
     // There is only one option left
     // error case, should never happen
     let mut new_cell_value = 11;
-    possible_values.iter().enumerate().filter(|v| *v.1).for_each(|(idx, _)| {
-        // should occur once
-        new_cell_value = idx as u8 + 1;
-    });
+    possible_values
+        .iter()
+        .enumerate()
+        .filter(|v| *v.1)
+        .for_each(|(idx, _)| {
+            // should occur once
+            new_cell_value = idx;
+        });
     new_cell_value
 }
 
-fn fill_one_possibility_cells(grid: &mut Grid, values: [u8; 20]) -> bool {
+fn fill_one_possibility_cells(grid: &mut Grid, values: [usize; 20]) -> bool {
     let mut ret = true;
     for &val in &values {
         if ret {
-            if let CellValue::Possibilities(possible_values) = grid[val as usize] {
-                match grid[val as usize].get_nb_possibility() {
+            if let CellValue::Possibilities(possible_values) = grid[val] {
+                match grid[val].get_nb_possibility() {
                     0 => {
                         return false;
                     }
                     1 => {
-                        ret &= set_cell_value_at(
-                            grid,
-                            val as usize,
-                            get_last_value_possible(possible_values),
-                        );
+                        ret &=
+                            set_cell_value_at(grid, val, get_last_value_possible(possible_values));
                     }
                     _ => {}
                 }
@@ -948,18 +911,18 @@ fn fill_one_possibility_cells(grid: &mut Grid, values: [u8; 20]) -> bool {
     ret
 }
 
-fn set_cell_value_at(grid: &mut Grid, index: usize, cell_value: u8) -> bool {
+fn set_cell_value_at(grid: &mut Grid, index: usize, cell_value: usize) -> bool {
     grid[index] = CellValue::Value(cell_value);
 
-    for &val in &get_adjacent_cells(index as u8) {
-        if let CellValue::Possibilities(ref mut possible_values) = grid[val as usize] {
-            if possible_values[cell_value as usize - 1] {
-                possible_values[cell_value as usize - 1] = false;
+    for &val in &get_adjacent_cells(index) {
+        if let CellValue::Possibilities(ref mut possible_values) = grid[val] {
+            if possible_values[cell_value] {
+                possible_values[cell_value] = false;
             }
         }
     }
 
-    fill_one_possibility_cells(grid, get_adjacent_cells(index as u8))
+    fill_one_possibility_cells(grid, get_adjacent_cells(index))
 }
 
 fn solve_grid(mut grid: Grid) -> Option<Grid> {
@@ -977,6 +940,7 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
     // start by the number with the lowest possible values already in the grid when guessing
     let res = grid.iter()
         .enumerate()
+        .filter(|t: &(usize, &CellValue)| !t.1.is_value())
         .min_by_key(|val| val.1.get_nb_possibility());
 
     if let Some((index, &CellValue::Possibilities(poss))) = res {
@@ -987,8 +951,10 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
             .for_each(|t: (usize, &bool)| {
                 let (cell_value, _) = t;
                 if counter.read().unwrap().is_none() {
-                    let mut new_g = clone_grid(grid);
-                    if set_cell_value_at(&mut new_g, index as usize, cell_value as u8 + 1) && counter.read().unwrap().is_none() {
+                    let mut new_g = grid;
+                    if set_cell_value_at(&mut new_g, index, cell_value)
+                        && counter.read().unwrap().is_none()
+                    {
                         // print_grid_option(grid, true);
                         if let Some(gx) = solve_grid_recurse(new_g, counter) {
                             // return Some(gx);
@@ -1021,7 +987,7 @@ fn parse_grid(grid_string: &str) -> Grid {
                     i += 1;
                 }
                 val => {
-                    grid[i] = CellValue::Value(val.parse::<u8>().unwrap());
+                    grid[i] = CellValue::Value(val.parse::<usize>().unwrap() - 1);
                     i += 1;
                 }
             }
@@ -1061,7 +1027,6 @@ fn treat_grid(grid_string: &str) {
 }
 
 fn run() -> Result<()> {
-    
     let mut grid_strings = vec![];
     /*
     {
@@ -1089,7 +1054,7 @@ fn run() -> Result<()> {
         }
     } 
     */
-    
+
     {
         //let path = "../sudoku-rs/problems.txt";
         // let path = "../sudoku-rs/very_hard.txt";
@@ -1143,7 +1108,7 @@ fn test() {
 #[cfg(test)]
 #[test]
 fn test_print_grid() {
-/*
+    /*
     let grid_string = r#"
         1 _ _   _ 3 _   _ _ 9
         _ _ _   _ 2 _   _ _ _
@@ -1157,19 +1122,19 @@ fn test_print_grid() {
         _ _ _   _ _ _   _ _ _
         _ 8 _   _ _ _   _ _ _"#;
         */
-        
-    let grid_string = r#"1...3...9....2....3.7....5............4......7...........................8......."#;
+
+    let grid_string =
+        r#"1...3...9....2....3.7....5............4......7...........................8......."#;
 
     let grid: Grid = parse_grid(grid_string);
 
     print_grid(grid);
 }
 
-
 #[cfg(test)]
 #[bench]
 fn benchmark(b: &mut Bencher) {
-/*
+    /*
     let grid_string = r#"
 _ _ _   _ _ _   _ _ _
 _ 1 _   6 _ _   _ _ 8
@@ -1184,7 +1149,8 @@ _ 5 _   _ 3 _   7 _ _
 _ _ _   _ _ _   _ _ _"#;
 */
 
-    let grid_string = r#"..........1.6....8..5.7..1...8.........419.........2...5..3.7..4....8.9.........."#;
+    let grid_string =
+        r#"..........1.6....8..5.7..1...8.........419.........2...5..3.7..4....8.9.........."#;
 
     let grid: Grid = parse_grid(grid_string);
 
@@ -1194,7 +1160,7 @@ _ _ _   _ _ _   _ _ _"#;
 #[cfg(test)]
 #[bench]
 fn benchmark2(b: &mut Bencher) {
-/*
+    /*
     let grid_string = r#"
  _ _ _   _ _ _   _ _ _
  _ _ _   _ _ 3   _ 8 5
@@ -1208,8 +1174,9 @@ fn benchmark2(b: &mut Bencher) {
  _ _ 2   _ 1 _   _ _ _
  _ _ _   _ 4 _   _ _ 9"#;
  */
- 
-    let grid_string = "..............3.85..1.2.......5.7.....4...1...9.......5......73..2.1........4...9";
+
+    let grid_string =
+        "..............3.85..1.2.......5.7.....4...1...9.......5......73..2.1........4...9";
 
     let grid: Grid = parse_grid(grid_string);
 
