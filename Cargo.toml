@@ -3,8 +3,12 @@ name = "sudoku_solver"
 version = "0.1.0"
 authors = ["meven"]
 
+[profile.release]
+#debug = true
+#lto = false
+
 [dependencies]
 time = "0.1.35"
 num_cpus = "1.0"
 error-chain = "0.10.0"
-rayon = "0.7.0"
+rayon = "0.9.0"
