@@ -3,6 +3,7 @@
 
 extern crate num_cpus;
 use std::sync::RwLock;
+use std::io::{self, Write};
 
 #[macro_use]
 extern crate error_chain;
@@ -48,10 +49,6 @@ impl CellValue {
             }
         }
     }
-}
-
-fn is_grid_complete(g: Grid) -> bool {
-    g.iter().enumerate().all(|x| x.1.is_value())
 }
 
 fn is_grid_complete_full(g: Grid) -> bool {
@@ -877,52 +874,46 @@ fn get_cell_value(grid: Grid, index: usize) -> CellValue {
 
 fn get_last_value_possible(possible_values: [bool; 9]) -> usize {
     // There is only one option left
-    // error case, should never happen
-    let mut new_cell_value = 11;
-    possible_values
-        .iter()
-        .enumerate()
-        .filter(|v| *v.1)
-        .for_each(|(idx, _)| {
-            // should occur once
-            new_cell_value = idx;
-        });
-    new_cell_value
+    match possible_values.iter().enumerate().filter(|v| *v.1).next() {
+        // error case, should never happen
+        None => 11,
+        Some((idx, _)) => idx,
+    }
 }
 
 fn fill_one_possibility_cells(grid: &mut Grid, values: [usize; 20]) -> bool {
-    let mut ret = true;
     for &val in &values {
-        if ret {
-            if let CellValue::Possibilities(possible_values) = grid[val] {
-                match grid[val].get_nb_possibility() {
-                    0 => {
+        if let CellValue::Possibilities(possible_values) = grid[val] {
+            match grid[val].get_nb_possibility() {
+                0 => {
+                    return false;
+                }
+                1 => {
+                    if !set_cell_value_at(grid, val, get_last_value_possible(possible_values)) {
                         return false;
                     }
-                    1 => {
-                        ret &=
-                            set_cell_value_at(grid, val, get_last_value_possible(possible_values));
-                    }
-                    _ => {}
                 }
+                _ => {}
             }
         }
     }
-    ret
+    true
 }
 
 fn set_cell_value_at(grid: &mut Grid, index: usize, cell_value: usize) -> bool {
     grid[index] = CellValue::Value(cell_value);
 
-    for &val in &get_adjacent_cells(index) {
-        if let CellValue::Possibilities(ref mut possible_values) = grid[val] {
+    let adjs = get_adjacent_cells(index);
+
+    get_adjacent_cells(index).iter().for_each(|val| {
+        if let CellValue::Possibilities(ref mut possible_values) = grid[*val] {
             if possible_values[cell_value] {
                 possible_values[cell_value] = false;
             }
         }
-    }
+    });
 
-    fill_one_possibility_cells(grid, get_adjacent_cells(index))
+    fill_one_possibility_cells(grid, adjs)
 }
 
 fn solve_grid(mut grid: Grid) -> Option<Grid> {
@@ -944,7 +935,6 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
         .min_by_key(|val| val.1.get_nb_possibility());
 
     if let Some((index, &CellValue::Possibilities(poss))) = res {
-        // g = None;
         poss.par_iter()
             .enumerate()
             .filter(|t: &(usize, &bool)| *t.1)
@@ -955,9 +945,7 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
                     if set_cell_value_at(&mut new_g, index, cell_value)
                         && counter.read().unwrap().is_none()
                     {
-                        // print_grid_option(grid, true);
                         if let Some(gx) = solve_grid_recurse(new_g, counter) {
-                            // return Some(gx);
                             let mut gres = counter.write().unwrap();
                             *gres = Some(gx);
                         }
@@ -968,11 +956,7 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
         return *counter.read().unwrap();
     }
 
-    if is_grid_complete(grid) {
-        Some(grid)
-    } else {
-        None
-    }
+    Some(grid)
 }
 
 fn parse_grid(grid_string: &str) -> Grid {
@@ -1004,10 +988,14 @@ fn treat_grid(grid_string: &str) {
     let new_grid = solve_grid(grid);
     let duration = now.elapsed();
 
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+
     match new_grid {
         Some(new_grid) => {
-            println!(
-                "Grid complete ! in {} us",
+            let _ = write!(
+                handle,
+                "Grid complete ! in {} us\n",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
             print_grid(grid);
@@ -1017,8 +1005,9 @@ fn treat_grid(grid_string: &str) {
             }
         }
         None => {
-            println!(
-                "Couldn't solve the sudoku :( in {} ms",
+            let _ = write!(
+                handle,
+                "Couldn't solve the sudoku :( in {} ms\n",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
             print_grid(grid);
@@ -1073,9 +1062,8 @@ fn run() -> Result<()> {
     }
 
     grid_strings
-        .iter()
+        .par_iter()
         .for_each(|grid_string_local| treat_grid(grid_string_local));
-    //grid_strings.par_iter().for_each(|grid_string_local| treat_grid(grid_string_local));
 
     Ok(())
 }
