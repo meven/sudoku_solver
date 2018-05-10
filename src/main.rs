@@ -1,5 +1,6 @@
 #![feature(nll)]
 #![feature(test)]
+#![feature(slice_patterns)]
 
 extern crate num_cpus;
 use std::sync::RwLock;
@@ -56,6 +57,7 @@ impl CellValue {
         }
     }
 }
+
 
 fn is_grid_complete_full(g: Grid) -> bool {
     g.iter()
@@ -880,7 +882,7 @@ fn get_cell_value(grid: Grid, index: usize) -> CellValue {
 
 fn get_last_value_possible(possible_values: [bool; 9]) -> usize {
     // There is only one option left
-    match possible_values.iter().enumerate().filter(|v| *v.1).next() {
+    match possible_values.iter().enumerate().find(|v| *v.1) {
         // error case, should never happen
         None => 11,
         Some((idx, _)) => idx,
@@ -890,6 +892,61 @@ fn get_last_value_possible(possible_values: [bool; 9]) -> usize {
 fn fill_one_possibility_cells(grid: &mut Grid, values: [usize; 20]) -> bool {
     for &val in &values {
         if let CellValue::Possibilities(possible_values) = grid[val] {
+            
+            match possible_values {
+                [false, false, false, false, false, false, false, false, false] => {
+                    return false;
+                },
+                [true, false, false, false, false, false, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 0) {
+                        return false;
+                    }
+                },
+                [false, true, false, false, false, false, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 1) {
+                        return false;
+                    }
+                },
+                [false, false, true, false, false, false, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 2) {
+                        return false;
+                    }
+                },
+                [false, false, false, true, false, false, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 3) {
+                        return false;
+                    }
+                },
+                [false, false, false, false, true, false, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 4) {
+                        return false;
+                    }
+                },
+                [false, false, false, false, false, true, false, false, false] => {
+                    if !set_cell_value_at(grid, val, 5) {
+                        return false;
+                    }
+                },
+                [false, false, false, false, false, false, true, false, false] => {
+                    if !set_cell_value_at(grid, val, 6) {
+                        return false;
+                    }
+                },
+                [false, false, false, false, false, false, false, true, false] => {
+                    if !set_cell_value_at(grid, val, 7) {
+                        return false;
+                    }
+                },
+                [false, false, false, false, false, false, false, false, true] => {
+                    if !set_cell_value_at(grid, val, 8) {
+                        return false;
+                    }
+                }
+                _ => {
+                }
+            }
+            
+            /*
             match grid[val].get_nb_possibility() {
                 0 => {
                     return false;
@@ -901,6 +958,7 @@ fn fill_one_possibility_cells(grid: &mut Grid, values: [usize; 20]) -> bool {
                 }
                 _ => {}
             }
+            */
         }
     }
     true
@@ -911,7 +969,7 @@ fn set_cell_value_at(grid: &mut Grid, index: usize, cell_value: usize) -> bool {
 
     let adjs = get_adjacent_cells(index);
 
-    get_adjacent_cells(index).iter().for_each(|val| {
+    adjs.iter().for_each(|val| {
         if let CellValue::Possibilities(ref mut possible_values) = grid[*val] {
             if possible_values[cell_value] {
                 possible_values[cell_value] = false;
@@ -1061,7 +1119,7 @@ fn run() -> Result<()> {
     } 
     */
 
-    // single line 
+    // single line
     {
         //let path = "../sudoku-rs/problems.txt";
         // let path = "../sudoku-rs/very_hard.txt";
