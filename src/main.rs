@@ -4,6 +4,12 @@
 extern crate num_cpus;
 use std::sync::RwLock;
 use std::io::{self, Write};
+#[macro_use]
+extern crate structopt;
+
+use std::path::PathBuf;
+use structopt::StructOpt;
+
 
 #[macro_use]
 extern crate error_chain;
@@ -1015,12 +1021,23 @@ fn treat_grid(grid_string: &str) {
     }
 }
 
+/// A basic example
+#[derive(StructOpt, Debug)]
+#[structopt(name = "sudoku_solver")]
+struct Opt {
+    /// Files to process
+    #[structopt(name = "FILE", parse(from_os_str))]
+    file: PathBuf,
+}
+
 fn run() -> Result<()> {
+    let opt = Opt::from_args();
+    
     let mut grid_strings = vec![];
     /*
+    // multi line grid format
     {
-        let path = "grids.txt";
-        let input = File::open(path)?;
+        let input = File::open(opt.file)?;
         let buffered = BufReader::new(input);
 
         let mut line_buffer = vec![];
@@ -1044,13 +1061,14 @@ fn run() -> Result<()> {
     } 
     */
 
+    // single line 
     {
         //let path = "../sudoku-rs/problems.txt";
         // let path = "../sudoku-rs/very_hard.txt";
-        let path = "./hardest.txt";
+        //let path = "./hardest.txt";
         //let path = "./locat.txt";
-        //let path = "top95.txt";
-        let input = File::open(path)?;
+        // let path = "top95.txt";
+        let input = File::open(opt.file)?;
         let buffered = BufReader::new(input);
 
         for line in buffered.lines() {
@@ -1069,104 +1087,3 @@ fn run() -> Result<()> {
 }
 
 quick_main!(run);
-
-extern crate test;
-#[cfg(test)]
-use test::Bencher;
-
-/*
-#[cfg(test)]
-#[test]
-fn test() {
-    assert!(get_head_of_block(1) == 0);
-    assert!(get_head_of_block(11) == 0);
-    assert!(get_head_of_block(70) == 60);
-    assert!(get_head_of_block(78) == 60);
-    assert!(get_head_of_block(54) == 54);
-    assert!(get_head_of_block(56) == 54);
-    assert!(get_head_of_block(49) == 30);
-    assert!(get_head_of_block(47) == 27);
-    assert!(get_head_of_block(28) == 27);
-    assert!(get_head_of_block(35) == 33);
-    assert!(get_head_of_block(26) == 6);
-    assert!(get_head_of_block(32) == 30);
-    assert!(get_head_of_block(17) == 6);
-}
-*/
-#[cfg(test)]
-#[test]
-fn test_print_grid() {
-    /*
-    let grid_string = r#"
-        1 _ _   _ 3 _   _ _ 9
-        _ _ _   _ 2 _   _ _ _
-        3 _ 7   _ _ _   _ 5 _
-
-        _ _ _   _ _ _   _ _ _
-        _ _ 4   _ _ _   _ _ _
-        7 _ _   _ _ _   _ _ _
-
-        _ _ _   _ _ _   _ _ _
-        _ _ _   _ _ _   _ _ _
-        _ 8 _   _ _ _   _ _ _"#;
-        */
-
-    let grid_string =
-        r#"1...3...9....2....3.7....5............4......7...........................8......."#;
-
-    let grid: Grid = parse_grid(grid_string);
-
-    print_grid(grid);
-}
-
-#[cfg(test)]
-#[bench]
-fn benchmark(b: &mut Bencher) {
-    /*
-    let grid_string = r#"
-_ _ _   _ _ _   _ _ _
-_ 1 _   6 _ _   _ _ 8
-_ _ 5   _ 7 _   _ 1 _
-
-_ _ 8   _ _ _   _ _ _
-_ _ _   4 1 9   _ _ _
-_ _ _   _ _ _   2 _ _
-
-_ 5 _   _ 3 _   7 _ _
-4 _ _   _ _ 8   _ 9 _
-_ _ _   _ _ _   _ _ _"#;
-*/
-
-    let grid_string =
-        r#"..........1.6....8..5.7..1...8.........419.........2...5..3.7..4....8.9.........."#;
-
-    let grid: Grid = parse_grid(grid_string);
-
-    b.iter(|| solve_grid(grid));
-}
-
-#[cfg(test)]
-#[bench]
-fn benchmark2(b: &mut Bencher) {
-    /*
-    let grid_string = r#"
- _ _ _   _ _ _   _ _ _
- _ _ _   _ _ 3   _ 8 5
- _ _ 1   _ 2 _   _ _ _
-
- _ _ _   5 _ 7   _ _ _
- _ _ 4   _ _ _   1 _ _
- _ 9 _   _ _ _   _ _ _
-
- 5 _ _   _ _ _   _ 7 3
- _ _ 2   _ 1 _   _ _ _
- _ _ _   _ 4 _   _ _ 9"#;
- */
-
-    let grid_string =
-        "..............3.85..1.2.......5.7.....4...1...9.......5......73..2.1........4...9";
-
-    let grid: Grid = parse_grid(grid_string);
-
-    b.iter(|| solve_grid(grid));
-}
