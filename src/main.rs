@@ -1,6 +1,4 @@
-#![feature(nll)]
 #![feature(test)]
-#![feature(slice_patterns)]
 
 extern crate num_cpus;
 use std::io::{self, Write};
@@ -42,6 +40,7 @@ enum CellValue {
 type Grid = [CellValue; 81];
 
 impl CellValue {
+    #[inline]
     pub fn is_value(&self) -> bool {
         match *self {
             CellValue::Value(_) => true,
@@ -74,41 +73,44 @@ fn print_grid(g: Grid) {
 fn print_grid_option(g: Grid, with_possibilities: bool) {
     let mut cnt = 0;
     let mut line = 0;
+    
+    let mut output = String::new();
 
     for &x in g.iter() {
         cnt += 1;
 
         match x {
-            CellValue::Value(i) => print!("{}", i + 1),
+            CellValue::Value(i) => output.push_str(&(i + 1).to_string()),
             CellValue::Possibilities(p) => {
                 if with_possibilities {
-                    print!("(");
+                    output.push_str("(");
                     for (idx, &val) in p.iter().enumerate() {
                         if val {
-                            print!("{},", idx + 1);
+                            output.push_str(&(idx + 1).to_string());
                         }
                     }
-                    print!(")");
+                    output.push_str(")");
                 } else {
-                    print!("_");
+                    output.push_str("_");
                 }
             }
         }
 
         if cnt == 9 {
             line += 1;
-            println!();
+            output.push_str("\n");
             cnt = 0;
             if line == 3 {
                 line = 0;
-                println!();
+                output.push_str("\n");
             }
         } else if cnt % 3 == 0 {
-            print!("   ");
+            output.push_str("   ");
         } else {
-            print!(" ");
+            output.push_str(" ");
         }
     }
+    print!("{}", output);
 }
 
 /*
@@ -403,9 +405,9 @@ fn treat_grid(grid_string: &str) {
 
     match new_grid {
         Some(new_grid) => {
-            let _ = write!(
+            let _ = writeln!(
                 handle,
-                "Grid complete ! in {} us\n",
+                "Grid complete ! in {} us",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
             print_grid(grid);
@@ -415,9 +417,9 @@ fn treat_grid(grid_string: &str) {
             }
         }
         None => {
-            let _ = write!(
+            let _ = writeln!(
                 handle,
-                "Couldn't solve the sudoku :( in {} ms\n",
+                "Couldn't solve the sudoku :( in {} ms",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
             print_grid(grid);
@@ -425,7 +427,6 @@ fn treat_grid(grid_string: &str) {
     }
 }
 
-/// A basic example
 #[derive(StructOpt, Debug)]
 #[structopt(name = "sudoku_solver")]
 struct Opt {
