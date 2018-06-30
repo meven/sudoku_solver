@@ -1,5 +1,3 @@
-#![feature(test)]
-
 extern crate num_cpus;
 use std::io::{self, Write};
 use std::sync::RwLock;
@@ -40,7 +38,6 @@ enum CellValue {
 type Grid = [CellValue; 81];
 
 impl CellValue {
-    #[inline]
     pub fn is_value(&self) -> bool {
         match *self {
             CellValue::Value(_) => true,
@@ -73,7 +70,7 @@ fn print_grid(g: Grid) {
 fn print_grid_option(g: Grid, with_possibilities: bool) {
     let mut cnt = 0;
     let mut line = 0;
-    
+
     let mut output = String::new();
 
     for &x in g.iter() {
@@ -341,7 +338,8 @@ fn solve_grid(mut grid: Grid) -> Option<Grid> {
 
 fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid> {
     // start by the number with the lowest possible values already in the grid when guessing
-    let res = grid.iter()
+    let res = grid
+        .iter()
         .enumerate()
         .filter(|t: &(usize, &CellValue)| !t.1.is_value())
         .min_by_key(|val| val.1.get_nb_possibility());
