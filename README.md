@@ -29,5 +29,7 @@ It is able to solve any sudoku in under 100 ms, most of them much faster.
 
 ## Other implementation
 
+https://emerentius.github.io/sudoku_web/  uses a better algorithm and can run in the browser using webassembly.
+
 https://github.com/gnuvince/sudoku-rs
 Quite a bit slower, but using rust idioms.
