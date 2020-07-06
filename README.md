@@ -19,7 +19,7 @@ Or
 
 ## Performance
 
-On my setup, a Rizen 5 1600 with 16Gb of RAM, it results in
+On my setup, a Ryzen 5 1600 with 16Gb of RAM, it results in
 
     real    0m0,080s
     user    0m0,849s
