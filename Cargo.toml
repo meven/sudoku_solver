@@ -2,7 +2,7 @@
 name = "sudoku_solver"
 version = "0.1.0"
 authors = ["meven"]
-edition = "2018"
+edition = "2021"
 
 [profile.release]
 #debug = true
