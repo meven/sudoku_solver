@@ -1,4 +1,4 @@
-pub static ADJACENT_CELLS: [[[usize; 8]; 3]; 81] = [
+pub const ADJACENT_CELLS: [[[usize; 8]; 3]; 81] = [
     [
         [1, 2, 3, 4, 5, 6, 7, 8],
         [9, 18, 27, 36, 45, 54, 63, 72],
@@ -406,7 +406,7 @@ pub static ADJACENT_CELLS: [[[usize; 8]; 3]; 81] = [
     ],
 ];
 
-pub static ADJACENT_VALUES: [[usize; 20]; 81] = [
+pub const ADJACENT_VALUES: [[usize; 20]; 81] = [
     [
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 18, 19, 20, 27, 36, 45, 54, 63, 72
     ],
