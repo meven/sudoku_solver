@@ -1,11 +1,9 @@
 extern crate num_cpus;
 use std::io::{self, Write};
 use std::sync::RwLock;
-#[macro_use]
-extern crate structopt;
 
 use std::path::PathBuf;
-use structopt::StructOpt;
+use clap::Parser;
 
 #[macro_use]
 extern crate error_chain;
@@ -425,11 +423,11 @@ fn treat_grid(grid_string: &str) {
     }
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "sudoku_solver")]
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
 struct Opt {
     /// Files to process
-    #[structopt(name = "FILE", parse(from_os_str))]
+    #[clap(name = "FILE", parse(from_os_str))]
     file: PathBuf,
 }
 
