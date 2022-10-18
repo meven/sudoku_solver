@@ -3,6 +3,8 @@ use std::io::{self, Write};
 use std::sync::RwLock;
 
 use std::path::PathBuf;
+
+extern crate clap;
 use clap::Parser;
 
 #[macro_use]
@@ -186,6 +188,7 @@ fn get_adjacent_cells(index: usize) -> [usize; 20] {
     //
     ADJACENT_VALUES[index]
 }
+
 
 fn build_possible_values_grid(grid: &mut Grid) -> bool {
     for index in 0..81 {
@@ -424,15 +427,15 @@ fn treat_grid(grid_string: &str) {
 }
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
 struct Opt {
     /// Files to process
-    #[clap(name = "FILE", parse(from_os_str))]
+    #[arg(name = "FILE")]
     file: PathBuf,
 }
 
 fn run() -> Result<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let mut grid_strings = vec![];
     /*
