@@ -80,31 +80,31 @@ fn print_grid_option(g: Grid, with_possibilities: bool) {
             CellValue::Value(i) => output.push_str(&(i + 1).to_string()),
             CellValue::Possibilities(p) => {
                 if with_possibilities {
-                    output.push_str("(");
+                    output.push('(');
                     for (idx, &val) in p.iter().enumerate() {
                         if val {
                             output.push_str(&(idx + 1).to_string());
                         }
                     }
-                    output.push_str(")");
+                    output.push(')');
                 } else {
-                    output.push_str("_");
+                    output.push('_');
                 }
             }
         }
 
         if cnt == 9 {
             line += 1;
-            output.push_str("\n");
+            output.push('\n');
             cnt = 0;
             if line == 3 {
                 line = 0;
-                output.push_str("\n");
+                output.push('\n');
             }
         } else if cnt % 3 == 0 {
             output.push_str("   ");
         } else {
-            output.push_str(" ");
+            output.push(' ');
         }
     }
     print!("{}", output);
@@ -346,6 +346,7 @@ fn solve_grid_recurse(grid: Grid, counter: &RwLock<Option<Grid>>) -> Option<Grid
         .min_by_key(|val| val.1.get_nb_possibility());
 
     if let Some((index, &CellValue::Possibilities(poss))) = res {
+        // parallel loop
         poss.par_iter()
             .enumerate()
             .filter(|t: &(usize, &bool)| *t.1)
