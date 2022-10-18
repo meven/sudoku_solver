@@ -20,8 +20,8 @@ use std::io::{BufRead, BufReader};
 use std::time::Instant;
 
 mod constants;
-use constants::ADJACENT_CELLS;
-use constants::ADJACENT_VALUES;
+use crate::constants::ADJACENT_CELLS;
+use crate::constants::ADJACENT_VALUES;
 
 error_chain! {
     foreign_links {
