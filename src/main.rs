@@ -5,7 +5,7 @@ use std::sync::RwLock;
 use std::path::PathBuf;
 
 extern crate clap;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 #[macro_use]
 extern crate error_chain;
@@ -188,7 +188,6 @@ fn get_adjacent_cells(index: usize) -> [usize; 20] {
     //
     ADJACENT_VALUES[index]
 }
-
 
 fn build_possible_values_grid(grid: &mut Grid) -> bool {
     for index in 0..81 {
@@ -433,53 +432,59 @@ struct Opt {
     /// Files to process
     #[arg(name = "FILE")]
     file: PathBuf,
+
+    #[arg(value_enum, default_value_t = InputFormat::OneLiner, short='f')]
+    input_format: InputFormat,
+}
+
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum InputFormat {
+    OneLiner,
+    MultiLine,
 }
 
 fn run() -> Result<()> {
     let opt = Opt::parse();
 
     let mut grid_strings = vec![];
-    /*
-    // multi line grid format
-    {
-        let input = File::open(opt.file)?;
-        let buffered = BufReader::new(input);
 
-        let mut line_buffer = vec![];
-        for line in buffered.lines() {
-            let line_content = line?;
-            if !line_content.is_empty() {
-                line_buffer.push(line_content);
-            }
-        }
+    match opt.input_format {
+        
+        InputFormat::MultiLine =>
+        {
+            let input = File::open(opt.file)?;
+            let buffered = BufReader::new(input);
 
-        let mut grid_string = String::from("");
-        for (index, line) in line_buffer.iter().enumerate() {
-            if index % 9 == 0 {
-                if index > 0 {
-                    grid_strings.push(grid_string.clone());
+            let mut line_buffer = vec![];
+            for line in buffered.lines() {
+                let line_content = line?;
+                if !line_content.is_empty() {
+                    line_buffer.push(line_content);
                 }
-                grid_string = String::from("");
             }
-            grid_string.push_str(line);
+
+            let mut grid_string = String::from("");
+            for (index, line) in line_buffer.iter().enumerate() {
+                if index % 9 == 0 {
+                    if index > 0 {
+                        grid_strings.push(grid_string.clone());
+                    }
+                    grid_string = String::from("");
+                }
+                grid_string.push_str(line);
+            }
         }
-    }
-    */
 
-    // single line
-    {
-        //let path = "../sudoku-rs/problems.txt";
-        // let path = "../sudoku-rs/very_hard.txt";
-        //let path = "./hardest.txt";
-        //let path = "./locat.txt";
-        // let path = "top95.txt";
-        let input = File::open(opt.file)?;
-        let buffered = BufReader::new(input);
+        InputFormat::OneLiner =>
+        {
+            let input = File::open(opt.file)?;
+            let buffered = BufReader::new(input);
 
-        for line in buffered.lines() {
-            let line_content = line?;
-            if !line_content.is_empty() {
-                grid_strings.push(line_content);
+            for line in buffered.lines() {
+                let line_content = line?;
+                if !line_content.is_empty() {
+                    grid_strings.push(line_content);
+                }
             }
         }
     }
