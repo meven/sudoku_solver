@@ -392,7 +392,7 @@ fn parse_grid(grid_string: &str) -> Grid {
     grid
 }
 
-fn treat_grid(grid_string: &str) {
+fn treat_grid(grid_string: &str, verbose: bool) {
     let grid: Grid = parse_grid(grid_string);
 
     let now = Instant::now();
@@ -409,8 +409,10 @@ fn treat_grid(grid_string: &str) {
                 "Grid complete ! in {} us",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
-            print_grid(grid);
-            print_grid(new_grid);
+            if verbose {
+                print_grid(grid);
+                print_grid(new_grid);
+            }
             if !is_grid_complete_full(new_grid) {
                 println!("Grid is not correct!");
             }
@@ -421,7 +423,9 @@ fn treat_grid(grid_string: &str) {
                 "Couldn't solve the sudoku :( in {} ms",
                 (1_000_000 * duration.as_secs() + u64::from(duration.subsec_nanos())) / (1_000)
             );
-            print_grid(grid);
+            if verbose {
+                print_grid(grid);
+            }
         }
     }
 }
@@ -433,8 +437,11 @@ struct Opt {
     #[arg(name = "FILE")]
     file: PathBuf,
 
-    #[arg(value_enum, default_value_t = InputFormat::OneLiner, short='f')]
+    #[arg(name = "input format", value_enum, default_value_t = InputFormat::OneLiner, short='f')]
     input_format: InputFormat,
+
+    #[arg(name = "verbose", short, long)]
+    verbose: bool,
 }
 
 #[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -448,38 +455,33 @@ fn run() -> Result<()> {
 
     let mut grid_strings = vec![];
 
+    let input = File::open(opt.file)?;
+    let buffered = BufReader::new(input);
+
     match opt.input_format {
-        
-        InputFormat::MultiLine =>
-        {
-            let input = File::open(opt.file)?;
-            let buffered = BufReader::new(input);
-
-            let mut line_buffer = vec![];
-            for line in buffered.lines() {
-                let line_content = line?;
-                if !line_content.is_empty() {
-                    line_buffer.push(line_content);
-                }
-            }
-
-            let mut grid_string = String::from("");
-            for (index, line) in line_buffer.iter().enumerate() {
-                if index % 9 == 0 {
-                    if index > 0 {
-                        grid_strings.push(grid_string.clone());
+        InputFormat::MultiLine => {
+            let not_empty_lines = buffered
+                .lines()
+                .filter_map(|l| {
+                    if let Ok(content) = l {
+                        Some(content)
+                    } else {
+                        None
                     }
-                    grid_string = String::from("");
+                })
+                .filter(|content| !&content.is_empty() && !content.chars().all(char::is_whitespace))
+                .collect::<Vec<_>>();
+
+            for nine_not_empty_lines in not_empty_lines.chunks(9) {
+                let mut grid = String::from("");
+                for lines in nine_not_empty_lines {
+                    grid.push_str(lines);
                 }
-                grid_string.push_str(line);
+                grid_strings.push(grid);
             }
         }
 
-        InputFormat::OneLiner =>
-        {
-            let input = File::open(opt.file)?;
-            let buffered = BufReader::new(input);
-
+        InputFormat::OneLiner => {
             for line in buffered.lines() {
                 let line_content = line?;
                 if !line_content.is_empty() {
@@ -491,7 +493,7 @@ fn run() -> Result<()> {
 
     grid_strings
         .par_iter()
-        .for_each(|grid_string_local| treat_grid(grid_string_local));
+        .for_each(|grid_string_local| treat_grid(grid_string_local, opt.verbose));
 
     Ok(())
 }
